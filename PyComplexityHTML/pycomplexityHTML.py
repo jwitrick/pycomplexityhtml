@@ -23,42 +23,65 @@ class HTMLFormatter(object):
     </html>
     """
     def __init__(self, input_str):
-        self.mccable = re.compile("McCabe Complexity .*")
         self.input_str = input_str
         self.html_str = HTMLFormatter.html_str
+        
+    def _parse_input(self):
+        blocks = self.input_str.split('===')
+        tables = []
+        for section in blocks:
+            revelent_section = self.find_mcCabe_blocks(section)
+            if revelent_section == "":
+                continue
+            tables.append(self.create_file_html(revelent_section))
+        return tables
     
+    def find_mcCabe_blocks(self, section):
+        mccabe = section.split('McCabe Complexity ')
+        mccabe_list = ""          
+        if len(mccabe) == 2:
+            mccabe_list = mccabe[1]
+        return mccabe_list
+    
+    def create_file_html(self, file_info):
+        lines = file_info.split('\n', 1)
+        file_name = self._get_file_name_from_raw(lines[0])
+        file_function_lines = self._get_file_function_lines(lines[1])
+        funct_info = self._get_function_stats(file_function_lines[1])
+        table_items = self._create_file_function_list(funct_info)
+        file_html = self._get_file_html_info(file_name, table_items)
+        return file_html
+    
+    def _get_file_name_from_raw(self, raw_file_name):
+        file_info = raw_file_name.split('file ', 1)
+        return file_info[1]
+        
+    def _get_file_function_lines(self, input_str):
+        return input_str.split('\n\n')
+    
+    def _get_function_stats(self, input_str):
+        return input_str.split('\n')
+        
+    def _create_file_function_list(self, funct_stats):
+        table_items = []
+        for s in funct_stats:
+            funct_info = s.lstrip().replace('  ', ' ').replace('  ', ' ')
+            table_items.append(funct_info)
+        return table_items
+        
+    def _get_file_html_info(self, file_name, table_items):
+        html_table = HTMLTable(table_items).__repr__()
+        return HTMLHeading("File: %s"%file_name).__repr__() + html_table
+        
     def format_html(self):
-        tables = self.find_McCabe_Blocks()
+        tables = self._parse_input()
         output_html = ""
         for values in tables:
             output_html += values
         val_dict = {'content':output_html}
         return self.html_str % val_dict
-    
-    def find_McCabe_Blocks(self):
-        blocks = self.input_str.split('===')
-        tables = []
-        for section in blocks:
-            mccabe = section.split('McCabe Complexity ')          
-            if len(mccabe) == 2:
-                m = mccabe[1]
-                lines = m.split('\n', 1)
-                file_name = self._get_file_name_from_raw(lines[0])
-                lines = lines[1].split('\n\n')
-                table_items = []
-                stats = lines[1].split('\n')
-                for s in stats:
-                    funct_stats = s.lstrip().replace('  ', ' ').replace('  ', ' ')
-                    table_items.append(funct_stats)
-                table = HTMLTable(table_items).__repr__()
-                file_html = HTMLHeading("File: %s"%file_name).__repr__() + table
-                
-                tables.append(file_html)
-        return tables
 
-    def _get_file_name_from_raw(self, raw_file_name):
-        file_info = raw_file_name.split('file ', 1)
-        return file_info[1]
+    
 
 def main():
     """Process the input and output html"""
